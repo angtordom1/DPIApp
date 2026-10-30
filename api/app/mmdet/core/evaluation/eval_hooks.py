@@ -22,6 +22,15 @@ def _calc_dynamic_intervals(start_interval, dynamic_interval_list):
 
 
 class EvalHook(BaseEvalHook):
+    # add by hui ##########################################################
+    def __init__(self, *args, **eval_kwargs):
+        self.do_final_eval = eval_kwargs.pop('do_final_eval', False)
+        super(EvalHook, self).__init__(*args, **eval_kwargs)
+
+    def _should_evaluate(self, runner):
+        return super(EvalHook, self)._should_evaluate(runner)
+
+    #########################################################################
 
     def __init__(self, *args, dynamic_intervals=None, **kwargs):
         super(EvalHook, self).__init__(*args, **kwargs)
@@ -64,7 +73,15 @@ class EvalHook(BaseEvalHook):
 # in order to avoid strong version dependency, we did not directly
 # inherit EvalHook but BaseDistEvalHook.
 class DistEvalHook(BaseDistEvalHook):
+    # add by hui ##########################################################
+    def __init__(self, *args, **eval_kwargs):
+        self.do_final_eval = eval_kwargs.pop('do_final_eval', False)
+        super(DistEvalHook, self).__init__(*args, **eval_kwargs)
 
+    def _should_evaluate(self, runner):
+        return super(DistEvalHook, self)._should_evaluate(runner)
+    #########################################################################
+    
     def __init__(self, *args, dynamic_intervals=None, **kwargs):
         super(DistEvalHook, self).__init__(*args, **kwargs)
 

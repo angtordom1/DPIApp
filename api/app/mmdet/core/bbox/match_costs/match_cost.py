@@ -42,6 +42,7 @@ class BBoxL1Cost:
         Returns:
             torch.Tensor: bbox_cost value with weight
         """
+
         if self.box_format == 'xywh':
             gt_bboxes = bbox_xyxy_to_cxcywh(gt_bboxes)
         elif self.box_format == 'xyxy':
@@ -183,3 +184,4 @@ class IoUCost:
         # The 1 is a constant that doesn't change the matching, so omitted.
         iou_cost = -overlaps
         return iou_cost * self.weight
+

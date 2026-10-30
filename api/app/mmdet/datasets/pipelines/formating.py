@@ -187,14 +187,16 @@ class DefaultFormatBundle:
     - gt_masks: (1)to tensor, (2)to DataContainer (cpu_only=True)
     - gt_semantic_seg: (1)unsqueeze dim-0 (2)to tensor, \
                        (3)to DataContainer (stack=True)
-
+                       
     Args:
         img_to_float (bool): Whether to force the image to be converted to
             float type. Default: True.
-    """
 
+    """
     def __init__(self, img_to_float=True):
         self.img_to_float = img_to_float
+
+
 
     def __call__(self, results):
         """Call function to transform and format common fields in results.
@@ -260,6 +262,7 @@ class DefaultFormatBundle:
     def __repr__(self):
         return self.__class__.__name__ + \
                f'(img_to_float={self.img_to_float})'
+
 
 
 @PIPELINES.register_module()
