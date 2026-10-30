@@ -1,0 +1,57 @@
+ARG PYTORCH="1.9.0"
+ARG CUDA="11.1"
+ARG CUDNN="8"
+
+FROM pytorch/pytorch:${PYTORCH}-cuda${CUDA}-cudnn${CUDNN}-devel
+
+RUN rm /etc/apt/sources.list.d/cuda.list \
+    && rm /etc/apt/sources.list.d/nvidia-ml.list \
+    && apt-key del 7fa2af80 \
+    && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub \
+    && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg libsm6 libxext6 libglib2.0-0 libxrender-dev \
+        git ninja-build \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir \
+        mmcv-full==1.5.0 \
+        -f https://download.openmmlab.com/mmcv/dist/cu111/torch1.9.0/index.html \
+    && pip install --no-cache-dir \
+        cython numpy pycocotools \
+        scikit-image \
+        Flask==2.0.3 flask_restful==0.3.9 Werkzeug==2.0.3 \
+        matplotlib six terminaltables tqdm \
+        albumentations \
+        onnx onnxruntime-gpu onnx-simplifier \
+    && conda remove -y --force opencv 2>/dev/null || true \
+    && pip uninstall -y opencv-python opencv-python-headless 2>/dev/null || true \
+    && pip install --no-cache-dir opencv-python-headless==4.8.1.78 pytest==7.4.4 \
+    && mkdir -p /pkg/server \
+    && ln -sf /home/flaskapi /pkg/server/app \
+    && touch /pkg/server/__init__.py
+
+ENV FLASK_APP=app.py \
+    FLASK_ENV=development \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 \
+    FORCE_CUDA=1 \
+    TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6+PTX" \
+    PYTHONPATH=/home/flaskapi:/pkg
+
+COPY huicv/deps/mini_maskrcnn_benchmark /tmp/mini_maskrcnn_benchmark
+RUN cd /tmp/mini_maskrcnn_benchmark \
+    && rm -rf build *.egg-info \
+    && python setup.py install \
+    && rm -rf /tmp/mini_maskrcnn_benchmark
+
+# mmcv 1.5 calls yapf's FormatCode(verify=...), removed in yapf 0.40.2 (breaks tools/train.py)
+RUN pip install --no-cache-dir yapf==0.40.1
+
+WORKDIR /home/flaskapi
+COPY . /home/flaskapi
+
+RUN useradd --create-home --uid 1000 flask
+USER flask
+
+EXPOSE 5000
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000", "--no-debugger"]

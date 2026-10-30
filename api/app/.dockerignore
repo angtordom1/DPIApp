@@ -1,0 +1,21 @@
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+tests
+*.md
+.env*
+Dockerfile*
+
+# Datasets, experiment outputs and training checkpoints (mounted at runtime)
+configs/checkpoints
+configs/uploaded
+data
+fovea
+work_dirs
+exp
+tools/result
+.eggs
+*.egg-info
+*.ipynb
+*.pdf

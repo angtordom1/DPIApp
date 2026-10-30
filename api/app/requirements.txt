@@ -1,0 +1,19 @@
+-f https://download.pytorch.org/whl/torch_stable.html
+-f https://download.openmmlab.com/mmcv/dist/cpu/torch1.9.0/index.html
+torch==1.9.0+cpu
+torchvision==0.10.0+cpu
+mmcv-full==1.5.0
+numpy<1.24
+Flask==2.0.3
+flask_restful==0.3.9
+Werkzeug==2.0.3
+gunicorn==22.0.0
+matplotlib
+Pillow==10.4.0
+pycocotools; platform_system == "Linux"
+pycocotools-windows; platform_system == "Windows"
+six
+terminaltables
+tqdm
+opencv-python-headless==4.8.1.78
+onnxruntime==1.14.1
