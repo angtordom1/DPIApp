@@ -285,6 +285,7 @@ class CocoFmtDataset(CocoDataset):
                 predictions = mmcv.load(result_files[metric])
                 # add by hui ######################################################
                 import shutil
+                mmcv.mkdir_or_exist('./exp')  # not in the repository: created on first evaluation
                 shutil.copy(result_files[metric], './exp/latest_result.json')
                 ###################################################################
                 if iou_type == 'segm':
