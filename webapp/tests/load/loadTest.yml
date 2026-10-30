@@ -1,0 +1,35 @@
+config:
+  # override with: artillery run --target <url>/api tests/load/loadTest.yml
+  target: "http://localhost:3000/api"
+  plugins:
+    expect: {}
+    ensure: {}
+  # the run fails (exit code 1) if logins get slow or start failing
+  ensure:
+    thresholds:
+      - http.response_time.p95: 500
+    conditions:
+      - expression: "vusers.failed == 0"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warming up"
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 20
+      name: "Ramping up"
+    - duration: 240
+      arrivalRate: 20
+      name: "Sustained load"
+
+scenarios:
+  # logs in as the test user from .env (created by tests/e2e/seed.js)
+  - name: "Log in flow"
+    flow:
+      - post:
+          url: "/login"
+          json:
+            username: "{{ $env.TEST_USER_USERNAME }}"
+            password: "{{ $env.TEST_USER_PASSWORD }}"
+          expect:
+            - statusCode: 200
