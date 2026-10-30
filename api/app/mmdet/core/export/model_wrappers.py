@@ -112,28 +112,34 @@ class ONNXRuntimeDetector(DeployBaseDetector):
         # register custom op for onnxruntime
         if osp.exists(ort_custom_op_path):
             session_options.register_custom_ops_library(ort_custom_op_path)
-        sess = ort.InferenceSession(onnx_file, session_options)
         providers = ['CPUExecutionProvider']
         options = [{}]
-        is_cuda_available = ort.get_device() == 'GPU'
-        if is_cuda_available:
+        if ort.get_device() == 'GPU' and torch.cuda.is_available():
             providers.insert(0, 'CUDAExecutionProvider')
             options.insert(0, {'device_id': device_id})
-
-        sess.set_providers(providers, options)
+        # ORT >= 1.9 requires the providers when the build has several of them
+        sess = ort.InferenceSession(
+            onnx_file, session_options,
+            providers=providers, provider_options=options)
 
         self.sess = sess
-        self.io_binding = sess.io_binding()
         self.output_names = [_.name for _ in sess.get_outputs()]
-        self.is_cuda_available = is_cuda_available
+        # ORT falls back to CPU when CUDA cannot be initialised
+        self.is_cuda_available = \
+            'CUDAExecutionProvider' in sess.get_providers()
 
     def forward_test(self, imgs, img_metas, **kwargs):
         input_data = imgs[0]
         # set io binding for inputs/outputs
         device_type = 'cuda' if self.is_cuda_available else 'cpu'
-        if not self.is_cuda_available:
-            input_data = input_data.cpu()
-        self.io_binding.bind_input(
+        # io_binding takes a raw pointer, so the tensor must live where the session runs: a CPU
+        # tensor bound as 'cuda' (callers without MMDataParallel, like the Flask app) crashes cuDNN
+        input_data = input_data.cuda(self.device_id) if self.is_cuda_available \
+            else input_data.cpu()
+        # one binding per call: a shared one would let concurrent requests (threaded servers)
+        # overwrite each other's input pointer
+        io_binding = self.sess.io_binding()
+        io_binding.bind_input(
             name='input',
             device_type=device_type,
             device_id=self.device_id,
@@ -142,10 +148,10 @@ class ONNXRuntimeDetector(DeployBaseDetector):
             buffer_ptr=input_data.data_ptr())
 
         for name in self.output_names:
-            self.io_binding.bind_output(name)
+            io_binding.bind_output(name)
         # run session to get outputs
-        self.sess.run_with_iobinding(self.io_binding)
-        ort_outputs = self.io_binding.copy_outputs_to_cpu()
+        self.sess.run_with_iobinding(io_binding)
+        ort_outputs = io_binding.copy_outputs_to_cpu()
         return ort_outputs
 
 
