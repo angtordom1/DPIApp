@@ -1,0 +1,76 @@
+name: dpiapp
+
+services:
+  flask_api:
+    build:
+      context: ./api/app
+    volumes:
+      - ./api/app/configs/checkpoints:/home/flaskapp/configs/checkpoints
+      - ./api/app/configs/uploaded:/home/flaskapp/configs/uploaded
+    networks:
+      - internal
+    restart: unless-stopped
+
+  webapp:
+    build:
+      context: ./webapp
+    init: true
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - WEB_SERVER_URL=http://flask_api:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+      flask_api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    networks:
+      - internal
+    restart: unless-stopped
+
+  database:
+    image: mongo:6
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    restart: unless-stopped
+    networks:
+      - internal
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://database:27017
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:?Set MONGO_EXPRESS_PASSWORD in .env}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - internal
+    restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mongo_data:

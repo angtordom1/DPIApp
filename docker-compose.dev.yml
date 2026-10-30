@@ -1,0 +1,121 @@
+name: dpiapp-dev
+
+services:
+  flask_api:
+    build:
+      context: ./api/app
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./api/app:/home/flaskapi
+    environment:
+      - FLASK_ENV=development
+    ports:
+      - "127.0.0.1:5000:5000"
+    restart: unless-stopped
+    networks:
+      - internal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  webapp:
+    image: node:22
+    working_dir: /webapp
+    command: sh -c "npm install --no-audit --no-fund && npx nodemon --legacy-watch --watch server server/server.js"
+    volumes:
+      - ./webapp:/webapp
+      - webapp_node_modules:/webapp/node_modules
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - WEB_SERVER_URL=http://flask_api:5000
+      - APP_URL=http://localhost:8080
+      - CYPRESS_INSTALL_BINARY=0
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - database
+      - flask_api
+      - mailpit
+    networks:
+      - internal
+
+  client:
+    image: node:22
+    working_dir: /webapp/client
+    command: sh -c "npm install --no-audit --no-fund && npm run serve"
+    volumes:
+      - ./webapp/client:/webapp/client
+      - client_node_modules:/webapp/client/node_modules
+    environment:
+      - API_PROXY_TARGET=http://webapp:3000
+      - WATCHPACK_POLLING=true
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - webapp
+    networks:
+      - internal
+
+  database:
+    image: mongo:6
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    restart: unless-stopped
+    networks:
+      - internal
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://database:27017
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:?Set MONGO_EXPRESS_PASSWORD in .env}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - internal
+
+
+  # Converts PyTorch checkpoints to ONNX. Never starts with `docker-compose up`.
+  # Usage: docker-compose --profile convert run --rm convert
+  convert:
+    build:
+      context: ./api/app
+      dockerfile: Dockerfile.dev
+    profiles: ["convert"]
+    volumes:
+      - ./api/app/configs:/home/flaskapi/configs
+      - ./api/app/tools:/home/flaskapi/tools
+      # Sample image used to trace the model during export
+      - ./webapp/client/public/images:/samples:ro
+    command: bash tools/deployment/convert.sh
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  webapp_node_modules:
+  client_node_modules:

@@ -1,0 +1,136 @@
+name: dpiapp-test
+
+# Self-contained test environment: its own database (in memory, gone when it stops), mail catcher,
+# inference server and app, nothing published. It does not touch the app's stacks or data and can
+# run while they are up. Each suite is a profile with everything it needs; `up` starts the whole
+# profile, shows the suite's output and stops every container when the suite ends:
+#
+#   docker compose -f docker-compose.test.yml --profile unit up --build --abort-on-container-exit --exit-code-from unit-tests --attach unit-tests
+#   docker compose -f docker-compose.test.yml --profile e2e up --build --abort-on-container-exit --exit-code-from e2e-tests --attach e2e-tests
+#   docker compose -f docker-compose.test.yml --profile load up --build --abort-on-container-exit --exit-code-from load-tests --attach load-tests
+#
+# `docker compose -f docker-compose.test.yml down` removes the stopped containers afterwards.
+
+x-test-user: &test-user
+  TEST_USER_USERNAME: ${TEST_USER_USERNAME:-demouser}
+  TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-demopassword}
+
+services:
+  database:
+    image: mongo:6
+    profiles: ["unit", "e2e", "load"]
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    profiles: ["e2e", "load"]
+
+  flask_api:
+    build:
+      context: ./api/app
+    profiles: ["e2e", "load"]
+    volumes:
+      - ./api/app/configs/checkpoints:/home/flaskapp/configs/checkpoints:ro
+
+
+  webapp:
+    build:
+      context: ./webapp
+    profiles: ["e2e", "load"]
+    # Node as PID 1 ignores SIGTERM: a small init forwards it, so stopping takes no 10 s timeout
+    init: true
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://database:27017/dpiapp_e2e
+      WEB_SERVER_URL: http://flask_api:5000
+      APP_URL: http://webapp:3000
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      # a test-only secret: these tokens never leave this environment
+      JWT_SECRET: test-environment-secret-not-used-anywhere-else
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/models').then((r) => r.json()).then((m) => process.exit(m.length ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    depends_on:
+      database:
+        condition: service_healthy
+      flask_api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  # ---- suites ----
+
+  unit-tests:
+    image: node:22
+    profiles: ["unit"]
+    working_dir: /webapp
+    volumes:
+      - ./webapp:/webapp
+      # keep the container's Linux node_modules out of the host folder
+      - /webapp/node_modules
+    environment:
+      <<: *test-user
+      MONGODB_URI: mongodb://database:27017/dpiapp_test
+      JWT_SECRET: test-environment-secret-not-used-anywhere-else
+      CYPRESS_INSTALL_BINARY: "0"
+    command: sh -c "npm ci --no-audit --no-fund && npm run tests:unit"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  test-users:
+    image: node:22
+    profiles: ["e2e", "load"]
+    working_dir: /webapp
+    volumes:
+      - ./webapp:/webapp
+      - /webapp/node_modules
+    environment:
+      <<: *test-user
+      MONGODB_URI: mongodb://database:27017/dpiapp_e2e
+      CYPRESS_INSTALL_BINARY: "0"
+    command: sh -c "npm ci --omit=dev --no-audit --no-fund && npm run tests:seed"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  e2e-tests:
+    image: cypress/included:10.11.0
+    profiles: ["e2e"]
+    working_dir: /webapp
+    volumes:
+      - ./webapp/tests/e2e:/webapp/tests/e2e
+    environment:
+      <<: *test-user
+      CYPRESS_BASE_URL: http://webapp:3000
+      MAILPIT_URL: http://mailpit:8025
+    entrypoint: cypress
+    command: run --config-file tests/e2e/cypress.config.js
+    depends_on:
+      test-users:
+        condition: service_completed_successfully
+      webapp:
+        condition: service_healthy
+
+  load-tests:
+    image: artilleryio/artillery:2.0.21
+    profiles: ["load"]
+    volumes:
+      - ./webapp/tests/load:/scripts:ro
+    environment:
+      <<: *test-user
+    command: run --target http://webapp:3000/api /scripts/loadTest.yml
+    depends_on:
+      test-users:
+        condition: service_completed_successfully
+      webapp:
+        condition: service_healthy
