@@ -1,0 +1,37 @@
+{
+	"name": "dpiapp-client",
+	"version": "1.0.0",
+	"private": true,
+	"license": "MIT",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"scripts": {
+		"serve": "vue-cli-service serve",
+		"build": "vue-cli-service build",
+		"lint": "vue-cli-service lint"
+	},
+	"devDependencies": {
+		"@babel/eslint-parser": "^7.0.0",
+		"@vue/cli-plugin-babel": "~5.0.0",
+		"@vue/cli-plugin-eslint": "~5.0.0",
+		"@vue/cli-plugin-router": "~5.0.0",
+		"@vue/cli-service": "~5.0.0",
+		"@vue/compiler-sfc": "^3.0.0",
+		"eslint": "^8.0.0",
+		"eslint-plugin-vue": "^9.0.0",
+		"sass": "^1.45.0",
+		"sass-loader": "^12.0.0"
+	},
+	"dependencies": {
+		"axios": "^1.21.0",
+		"core-js": "^3.6.5",
+		"jwt-decode": "^3.1.2",
+		"primeflex": "^3.1.2",
+		"primeicons": "^5.0.0",
+		"primevue": "^3.12.2",
+		"vue": "^3.5.0",
+		"vue-axios": "^3.4.1",
+		"vue-router": "^4.0.0-0"
+	}
+}
