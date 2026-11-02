@@ -45,8 +45,7 @@
 						</template>
 					</Column>
 					<Column field="ms" header="ms/recorte (GPU)"></Column>
-				</DataTable>
-				<br><br>
+				</DataTable>				<br>
 
 				<p class="text-center font-italic">Modelos que sirve esta página (ONNX Runtime en CPU)</p>
 				<DataTable :value="served" responsiveLayout="scroll" class="mb-4">
@@ -58,8 +57,7 @@
 					</Column>
 					<Column field="ms" header="ms/recorte (CPU)"></Column>
 				</DataTable>
-				<p class="text-justify text-600">La referencia servida se reentrenó en 2026 con la misma receta que SSPNet Tiny para comparar solo
-					el cuello de la red. El SSPNet (v2) exportado funciona a una sola escala, por lo que su precisión no es la de la memoria.
+				<p class="text-justify text-600">El SSPNet (v2) exportado funciona a una sola escala, por lo que su precisión no es la de la memoria.
 					La página procesa la imagen completa de una vez y solo dibuja las detecciones con una confianza de al menos 0,7, mientras
 					que el AP se mide sobre recortes y con todas las detecciones; por eso el resultado puede mostrar menos personas de las que
 					el modelo encuentra.</p>
@@ -82,12 +80,12 @@ export default {
 			thesis: [
 				{ model: 'SSPNet (v2)', AP50tiny: '49,58', AP50tiny1: '37,40', AP50tiny2: '52,30', AP50tiny3: '58,76', AP25tiny: '67,98', ms: '542,2' },
 				{ model: 'SSPNet Tiny (v1)', AP50tiny: '47,30', AP50tiny1: '31,88', AP50tiny2: '51,01', AP50tiny3: '56,84', AP25tiny: '69,41', ms: '54,3' },
-				{ model: 'Faster R-CNN R50-FPN', AP50tiny: '29,56', AP50tiny1: '17,41', AP50tiny2: '34,35', AP50tiny3: '37,73', AP25tiny: '46,12', ms: '56,9' },
+				{ model: 'Faster R-CNN R50-FPN', AP50tiny: '28,74', AP50tiny1: '17,11', AP50tiny2: '33,24', AP50tiny3: '36,70', AP25tiny: '44,96', ms: '56,9' },
 			],
 			served: [
 				{ model: 'SSPNet (v2)', AP50tiny: 'sin evaluar', ms: '1694' },
 				{ model: 'SSPNet Tiny (v1)', AP50tiny: '47,24', ms: '447' },
-				{ model: 'Faster R-CNN R50-FPN (2026)', AP50tiny: '43,74', ms: '271' },
+				{ model: 'Faster R-CNN R50-FPN (2026)', AP50tiny: '44,05', ms: '264' },
 			]
 		}
 	},

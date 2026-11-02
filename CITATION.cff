@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "DPIApp: Detección de Personas en Imágenes Aéreas"
+abstract: "Detection of tiny people (2-20 px) in aerial and drone images with SSPNet on TinyPerson, exported to ONNX and served through a Flask inference API and a web application."
+type: software
+license: Apache-2.0
+authors:
+  - family-names: Torregrosa Domínguez
+    given-names: Ángel
+keywords:
+  - tiny object detection
+  - TinyPerson
+  - SSPNet
+  - MMDetection
+  - ONNX
+preferred-citation:
+  type: thesis
+  title: "Detección de Personas en Imágenes Aéreas"
+  authors:
+    - family-names: Torregrosa Domínguez
+      given-names: Ángel
+  institution:
+    name: Universidad de Sevilla
+  year: 2022
+  thesis-type: "Trabajo Fin de Grado (Bachelor's thesis)"
