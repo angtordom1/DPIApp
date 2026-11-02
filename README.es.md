@@ -108,7 +108,7 @@ Para desarrollar usa `docker compose -f docker-compose.dev.yml up`. Todo se ejec
 
 ### Reproducir la evaluación
 
-Con el dataset TinyPerson en `api/app/data/tinyPerson/` y los checkpoints de PyTorch en `api/app/configs/checkpoints/`, ejecuta dentro del contenedor de desarrollo con GPU (`docker compose -f docker-compose.dev.yml run --rm flask_api sh`):
+Con el dataset TinyPerson en `api/app/data/tinyPerson/` y los checkpoints de PyTorch en `api/app/configs/checkpoints/` (.pth, no publicados; disponibles bajo petición), ejecuta dentro del contenedor de desarrollo con GPU (`docker compose -f docker-compose.dev.yml run --rm flask_api sh`):
 
 ```bash
 MODEL=faster_rcnn_r50_sspnet_1x_Tiny
